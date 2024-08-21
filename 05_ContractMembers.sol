@@ -329,4 +329,205 @@ contract ContractMembers {
     // 可见性为 internal 的变量和函数可以被主合约和子合约访问。也就是可以被 MainContract , ChildContract 访问。
     // private
     // 可见性为 private 的变量和函数只能被主合约访问。也就是只能被 MainContract 访问。
+
+
+    /* Solidity 状态可变性 */
+    // 合约函数在区块链上的主要作用通常涉及修改状态，如转账、更改状态变量或触发事件等。然而，并非所有函数都需要这种能力；某些函数可能仅仅提供辅助作用，例如进行计算或返回某些值，而不应该改变
+    // 合约的状态。为了明确标示这些函数不应修改合约状态，你可以使用状态可变性修饰符（state mutability modifiers）。
+    // 状态可变性修饰符有几种类型，包括 pure 和 view：
+    // - pure 修饰符用于那些不会读取或修改合约状态的函数。例如，一个纯粹执行数学计算并返回结果的函数应被标记为 pure。
+    // - view 修饰符适用于那些只读取但不修改状态的函数。这种类型的函数可能会返回合约中某个状态变量的值，但不会对其进行更改。
+    // 正确使用这些修饰符不仅能提高合约的安全性和可读性，还有助于 Debug 过程，因为它们确保函数行为与开发者的意图一致。如果一个被标记为 pure 或 view 的函数尝试修改合约状态，Solidity 编译器将抛出错误，
+    // 防止潜在的逻辑错误影响合约执行。这种机制强制开发者更加精确地规划函数的角色和行为，从而提高整个合约的稳健性和效率。
+    // Solidity 提供了三个状态可变性修饰符：
+    // - view: 这种类型的函数仅能查询合约的状态，而不能对状态进行任何形式的修改。简而言之，view 函数是只读的，它们可以安全地读取合约状态但不会造成任何状态改变。
+    // - pure: pure 函数表示最严格的访问限制，它们不能查询也不能修改合约状态。这类函数只能执行一些基于其输入参数的计算并返回结果，而不依赖于合约中存储的数据。例如，一个计算两数相加的函数可以被标记为 pure。
+    // - payable: payable 修饰符允许函数接收以太币（Ether）转账。在 Solidity 中，函数默认是不接受以太币转账的；如果你的函数需要接收转账，则必须明确指定为 payable。这是处理金融交易时必不可少的修饰符。
+
+    // 怎样才算查询合约状态
+    // 在 Solidity 中，查询合约状态涉及到多种操作，这些操作可以直接读取或者间接影响合约存储的数据。为了更好地理解和规范这些操作，以下是被明确定义为查询合约状态的五种行为：
+    // 1.读取状态变量：直接访问合约中定义的任何状态变量。
+    // 2.访问余额：使用 address(this).balance 或 <address>.balance 来获取合约或任何地址的当前以太币余额。
+    // 3.访问区块链特性：通过 block，tx，msg 等全局变量的成员访问区块链的特定数据。例如，block.timestamp 获取区块的时间戳，msg.sender 获取消息发送者的地址。
+    // 4.调用非 pure 函数：任何未明确标记为 pure 的函数调用。即便函数本身没有修改状态，但如果它没有被标记为 pure，调用它仍被视为状态查询。
+    // 5.使用内联汇编：特别是那些包含某些操作码的内联汇编，这些操作码可能会读取或依赖于链上数据。
+
+    // 怎样才算修改合约状态
+    // 在 Solidity 中，明确哪些行为会修改合约状态是至关重要的，这有助于开发者理解合约的行为，并确保安全地进行合约操作。以下是被认定为修改了合约状态的八种主要行为：
+    // 1.修改状态变量：直接改变存储在合约中的任何状态变量的值。
+    // 2.触发事件：在合约中发出事件，这通常用于记录合约活动，尽管本身不改变任何存储的状态变量，但被视为状态改变，因为它改变了链上的日志。
+    // 3.创建其他合约：通过合约代码创建新合约实例。
+    // 4.使用 selfdestruct：销毁当前合约，并将剩余的以太币发送到指定地址。
+    // 5.通过函数发送以太币：包括使用 transfer 或 send 方法发送以太币。
+    // 6.调用非 view 或 pure 的函数：调用任何可能改变状态的函数，如果函数未明确标记为 view 或 pure，则默认可能修改状态。
+    // 7.使用低级调用：如 call、delegatecall、staticcall 等。这些低级函数允许与其他合约交互，并可能导致状态变化。
+    // 8.使用含有特定操作码的内联汇编：特定的汇编代码可能直接修改状态，例如直接写入存储或执行控制合约资金的操作。
+
+    // view 函数
+    // 如果你的函数承诺不会修改合约状态，那么你应该为它加上 view 修饰符。如下所示：
+   /*  uint count;
+    function GetCount() public view returns(uint) {
+        return count;
+    } */
+    // 在 Solidity 中，view 函数是一种特殊的函数类型，其主要作用是读取合约的状态而不进行任何修改。如果在 view 函数体内尝试修改合约状态，Solidity 编译器将直接报错，因为这违反了 view 声明的约束。
+    // 使用 view 函数有助于增强代码的安全性，确保函数的行为不会与预期产生副作用，只进行数据的读取操作。这种函数特别适合用于那些需要返回合约数据但不需要更改它的场景，比如获取当前的状态变量值或计算返回
+    // 某些派生值而不影响合约状态的函数。
+
+    // pure 函数
+    // 纯函数（pure function）是函数式编程中的一个重要概念。在编程中，如果一个函数满足以下条件，则它可以被认为是纯函数：
+    // 1.相同输入产生相同输出：对于相同的输入值，纯函数必须始终产生相同的输出。
+    // 2.输出仅依赖输入：函数的输出只依赖于其输入参数，而与其他隐藏信息或状态无关，也不受 I/O 设备产生的外部输出影响。
+    // 3.无副作用：函数不能有语义上可观察的副作用，比如触发事件、输出到设备、或更改输入参数以外的内容等。
+    // 简单来说，纯函数不读不写状态变量，没有副作用。使用纯函数可以提高代码的安全性，避免出现与预期不符的副作用。
+    // 如果你的函数承诺不需要查询，也不需要修改合约状态，那么你应该为它加上 pure 修饰符。如下所示：
+    /* function add(uint lhs, uint rhs) public pure returns(uint) {
+        return lhs + rhs;
+    } */
+
+    // payable 函数
+    // 函数默认是不能接受 Ether 转账的。如果你的函数需要接受转账，那么你应该为它加上 payable 修饰符。如下所示：
+    /* function deposit() external payable {
+        // deposit to current contract
+    } */
+
+
+    /* Solidity receive 函数 */
+    // receive 函数是 Solidity 中的一种特殊函数，主要用于接收以太币（Ether）的转账。此外，还有一个 fallback 函数也可以用来接收以太币转账
+    // 需要注意的是，以太币转账与 ERC20 代币转账之间存在本质区别：
+    // - 以太币转账：转账的是以太坊的原生代币（native token），即 Ether。
+    // - ERC20 代币转账：转账的是非原生代币（non-native token），这些代币在合约内部实现类似于一个数据库，记录了每个持有者的代币数量。ERC20 代币转账通过调用普通的合约函数来实现。
+
+    // Solidity receive 函数定义语法
+    // receive 函数的定义格式是固定的，其可见性（visibility）必须为 external，状态可变性（state mutability）必须为 payable。同时要注意 receive 函数不需要 function 前缀
+    /* receive() external payable {
+        // 函数体
+    } */
+
+    // 合约没有定义 receive 和 fallback 函数时，不能对其转账
+    // 如果一个合约既没有定义 receive 函数，也没有定义 fallback 函数，那么该合约将无法接收以太币转账。在这种情况下，所有试图向该合约进行的转账操作都会被 revert（回退）。
+    // Callee 既没有定义 receive 函数，也没有定义 fallback 函数
+    // contract Callee {}
+
+    /* contract Caller {
+        address payable callee;
+
+        // 注意： 记得在部署的时候给 Caller 合约转账一些 Wei，比如 100
+        constructor() payable {
+            callee = payable(address(new Callee()));
+        }
+
+        // 失败，因为Callee既没有定义receive函数，也没有定义fallback函数
+        function tryTransfer() external {
+            callee.transfer(1);
+        }
+
+        function trySend() external {
+            bool success = callee.send(1);
+            require(success, "Failed to send Ether");
+        }
+
+        function tryCall() external {
+            (bool success, bytes memory data) = callee.call{value: 1}("");
+            require(success, "Failed to send Ether");
+        }
+    } */
+
+    // 需要注意的是，我们提到的以太币转账指的是纯转账（msg.data 为空）。这种转账不会调用任何函数，只是将以太币转到目标地址。在 Solidity 中，有三种方法可以进行以太币转账：
+    // - send(amount): 发送 amount 数量的以太币，固定使用 2300 gas，错误时不会 revert，只返回布尔值表示成功或失败。
+    // - transfer(amount): 发送 amount 数量的以太币，固定使用 2300 gas，错误时会 revert。
+    // - call{value: amount}(""): 发送 amount 数量的以太币，gas 可以自由设定，返回布尔值表示成功或失败。
+    // 这三种方法都是将 amount 数量的以太币发送到目标地址。如果合约既没有定义 receive 函数，也没有定义 fallback 函数，那么进行纯转账的操作会失败并回退。但是，这种限制
+    // 不影响带有 msg.data 的普通函数调用。例如，可以使用 call 来调用普通函数。
+
+    // 注意 Gas 不足的问题
+    // 在定义 receive 函数时，需要特别注意 Gas 不足的问题。前面我们提到，send 和 transfer 方法的 Gas 是固定为 2300 的。因此，这些方法剩余的 Gas 往往不足以执行复杂操作。
+    // 如果 receive 函数体需要执行较复杂的操作，那么可能会抛出“Out of Gas”异常。
+    // 以下操作通常会消耗超过 2300 Gas：
+    // - 修改状态变量
+    // - 创建合约
+    // - 调用其他相对复杂的函数
+    // - 发送以太币到其他账户
+    // 例如，下面的 receive 函数由于消耗的 Gas 超过了 2300，因此它总是会被 revert：
+    // 用send,transfer函数转账到该合约都会被 revert，原因是消耗的 Gas 超过了 2300
+    /* contract Example {
+        uint a;
+        receive() external payable {
+            a += 1;
+        }
+    } */
+
+
+    /* Solidity fallback 函数 */
+    // fallback 函数是 Solidity 中的一种特殊函数，用于在调用的函数不存在或未定义时充当兜底。顾名思义，fallback 在中文中有回退、兜底的意思。类似于没有带现金时可以使用银行卡付款。
+    // 需要注意的是，这里所说的“匹配不到”、“不存在”、“没有定义”都指的是同一个意思。
+    // fallback 函数可以在以下两种情况下兜底：
+    // - receive 函数不存在（因为没有定义）
+    // - 普通函数不存在（因为没有定义）
+    // 简而言之：
+    // - 当需要用到 receive 函数时，如果它没有被定义，就使用 fallback 函数兜底。
+    // - 当调用的函数在合约中不存在或没有被定义时，也使用 fallback 函数兜底。
+
+    // 兜底 receive 函数不存在的情况
+    // receive 函数只能在合约接受纯转账（msg.data 为空）时被触发，例如通过以下方法进行转账：
+    // - send(amount)：Gas 固定为 2300，错误时会 revert。
+    // - transfer(amount)：Gas 固定为 2300，返回布尔值。
+    // - call{value: amount}("")：Gas 可以随意设定，返回布尔值。
+    // 当使用上述三种方法之一进行转账时，交易的 msg.data 为空。因此，理论上应该触发 receive 函数。如果合约没有定义 receive 函数，那么 fallback 函数将自动作为兜底函数被调用。
+    // 如果 fallback 函数也没有定义，那么交易将失败并 revert。
+
+    // 兜底普通函数不存在情况
+    // 如果你调用了一个合约里面没有定义的函数，比如说 funcNotExist() 那么 fallback 函数就会自动被调用。
 }
+
+// 示例：receive 和 fallback 函数被调用场景
+/* contract Callee {
+    event FunctionCalled(string);
+
+    function foo() external payable {
+        emit FunctionCalled("this is foo");
+    }
+
+    receive() external payable {
+        emit FunctionCalled("this is receive");
+    }
+
+    fallback() external payable {
+        emit FunctionCalled("this is fallback");
+    }
+}
+
+contract Caller {
+    address payable callee;
+
+    constructor() payable {
+        callee = payable(address(new Callee()));
+    }
+
+    function transferReceive() external {
+        callee.transfer(1);
+    }
+
+    function sendReceive() external {
+        bool success = callee.send(1);
+        require(success, "Failed to send Ether");
+    }
+
+    function callReceive() external {
+        (bool success, bytes memory data) = callee.call{value: 1}("");
+        require(success, "Failed to send Ether");
+    }
+
+    function callFoo() external {
+        (bool success, bytes memory data) = callee.call{value: 1}(
+            abi.encodeWithSignature("foo()")
+        );
+        require(success, "Failed to send Ether");
+    }
+
+    function callFallback() external {
+        (bool success, bytes memory data) = callee.call{value: 1}(
+            abi.encodeWithSignature("funcNotExist()")
+        );
+        require(success, "Failed to send Ether");
+    }
+} */
